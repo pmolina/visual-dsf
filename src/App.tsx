@@ -1,0 +1,125 @@
+import { useState, useEffect } from 'react';
+import type { ResultState } from './types/bcra';
+import { fetchDebtHistory } from './api/bcra';
+import { CUITInput } from './components/CUITInput';
+import { ResultCard } from './components/ResultCard';
+
+function SunIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="4"/>
+      <line x1="12" y1="2" x2="12" y2="6"/>
+      <line x1="12" y1="18" x2="12" y2="22"/>
+      <line x1="4.22" y1="4.22" x2="7.05" y2="7.05"/>
+      <line x1="16.95" y1="16.95" x2="19.78" y2="19.78"/>
+      <line x1="2" y1="12" x2="6" y2="12"/>
+      <line x1="18" y1="12" x2="22" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="7.05" y2="16.95"/>
+      <line x1="16.95" y1="7.05" x2="19.78" y2="4.22"/>
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </svg>
+  );
+}
+
+export default function App() {
+  const [dark, setDark] = useState(() => {
+    const saved = localStorage.getItem('theme');
+    if (saved) return saved === 'dark';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', dark);
+    localStorage.setItem('theme', dark ? 'dark' : 'light');
+  }, [dark]);
+
+  const [results, setResults] = useState<Map<string, ResultState>>(new Map());
+  const [activeCuits, setActiveCuits] = useState<string[]>([]);
+  const loading = [...results.values()].some(r => r.status === 'loading');
+
+  async function handleSubmit(cuits: string[]) {
+    setActiveCuits(cuits);
+
+    const initial = new Map<string, ResultState>(
+      cuits.map(c => [c, { status: 'loading' }])
+    );
+    setResults(initial);
+
+    const settled = await Promise.allSettled(cuits.map(c => fetchDebtHistory(c)));
+
+    setResults(prev => {
+      const next = new Map(prev);
+      settled.forEach((result, i) => {
+        const cuit = cuits[i]!;
+        if (result.status === 'fulfilled') {
+          const data = result.value.results;
+          if (!data || data.periodos.length === 0) {
+            next.set(cuit, { status: 'empty' });
+          } else {
+            next.set(cuit, { status: 'success', data });
+          }
+        } else {
+          const msg = result.reason instanceof Error
+            ? result.reason.message
+            : 'Error desconocido';
+          if (msg.includes('sin deuda')) {
+            next.set(cuit, { status: 'empty' });
+          } else {
+            next.set(cuit, { status: 'error', message: msg });
+          }
+        }
+      });
+      return next;
+    });
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 transition-colors">
+      <div className="max-w-4xl mx-auto px-4 py-10">
+        {/* Header */}
+        <header className="mb-8 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              BCRA — Central de Deudores
+            </h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Consultá el historial de deudas por CUIT. Las columnas en rojo indican situación crediticia irregular (≥ 2).
+            </p>
+          </div>
+          <button
+            onClick={() => setDark(d => !d)}
+            className="shrink-0 mt-1 p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            aria-label={dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+          >
+            {dark ? <SunIcon /> : <MoonIcon />}
+          </button>
+        </header>
+
+        {/* Input */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5 mb-8">
+          <CUITInput onSubmit={handleSubmit} loading={loading} />
+        </div>
+
+        {/* Results */}
+        {activeCuits.length > 0 && (
+          <div className="space-y-5">
+            <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              Resultados ({activeCuits.length} CUIT{activeCuits.length !== 1 ? 's' : ''})
+            </h2>
+            {activeCuits.map(cuit => {
+              const state = results.get(cuit) ?? { status: 'loading' };
+              return <ResultCard key={cuit} cuit={cuit} state={state} />;
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

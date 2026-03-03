@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "og-image": "node -e \"const sharp=require('sharp'),fs=require('fs');sharp(fs.readFileSync('public/og-image.svg')).png().toFile('public/og-image.png',e=>e?console.error(e):console.log('og-image.png generated'))\"",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -24,6 +25,7 @@
     "eslint-plugin-react-hooks": "^5.1.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^15.15.0",
+    "sharp": "^0.34.5",
     "tailwindcss": "^4.0.0",
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.24.1",

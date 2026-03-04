@@ -30,6 +30,27 @@ function MoonIcon() {
 
 const STATUS_CUIT = '30546676427';
 
+interface HistoryItem {
+  cuit: string;
+  denominacion: string | null;
+  searchedAt: number;
+}
+
+const HISTORY_KEY = 'cuit_history';
+const MAX_HISTORY = 10;
+
+function loadHistory(): HistoryItem[] {
+  try {
+    return JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]');
+  } catch {
+    return [];
+  }
+}
+
+function formatCuit(cuit: string): string {
+  return `${cuit.slice(0, 2)}-${cuit.slice(2, 10)}-${cuit.slice(10)}`;
+}
+
 type ApiStatus = 'checking' | 'ok' | 'error';
 
 function ApiStatusPill({ status }: { status: ApiStatus }) {
@@ -83,9 +104,32 @@ export default function App() {
     localStorage.setItem('theme', dark ? 'dark' : 'light');
   }, [dark]);
 
+  const [history, setHistory] = useState<HistoryItem[]>(loadHistory);
   const [results, setResults] = useState<Map<string, ResultState>>(new Map());
   const [checksResults, setChecksResults] = useState<Map<string, ChequesState>>(new Map());
   const [activeCuits, setActiveCuits] = useState<string[]>([]);
+
+  function upsertHistory(cuit: string, denominacion: string | null) {
+    setHistory(prev => {
+      const existing = prev.find(h => h.cuit === cuit);
+      const item: HistoryItem = {
+        cuit,
+        denominacion: denominacion ?? existing?.denominacion ?? null,
+        searchedAt: Date.now(),
+      };
+      const next = [item, ...prev.filter(h => h.cuit !== cuit)].slice(0, MAX_HISTORY);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
+      return next;
+    });
+  }
+
+  function removeFromHistory(cuit: string) {
+    setHistory(prev => {
+      const next = prev.filter(h => h.cuit !== cuit);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
+      return next;
+    });
+  }
 
   const [initialInputValue] = useState(() => {
     const params = new URLSearchParams(window.location.search);
@@ -118,6 +162,16 @@ export default function App() {
       Promise.allSettled(cuits.map(c => fetchDebtHistory(c))),
       Promise.allSettled(cuits.map(c => fetchRejectedChecks(c))),
     ]);
+
+    cuits.forEach((cuit, i) => {
+      const debt = debtSettled[i];
+      const checks = checksSettled[i];
+      const denominacion =
+        (debt?.status === 'fulfilled' && debt.value.results?.denominacion) ||
+        (checks?.status === 'fulfilled' && checks.value.results?.denominacion) ||
+        null;
+      upsertHistory(cuit, denominacion);
+    });
 
     setResults(() => {
       const next = new Map<string, ResultState>();
@@ -184,6 +238,38 @@ export default function App() {
 
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5 mb-8">
           <CUITInput onSubmit={handleSubmit} loading={loading} initialValue={initialInputValue} />
+          {history.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+              <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Recientes</p>
+              <div className="space-y-0.5">
+                {history.map(item => (
+                  <div key={item.cuit} className="flex items-center gap-1 group">
+                    <button
+                      onClick={() => handleSubmit([item.cuit])}
+                      disabled={loading}
+                      className="flex-1 flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors text-left min-w-0 disabled:opacity-50"
+                    >
+                      <span className="text-xs font-mono text-gray-400 dark:text-gray-500 shrink-0">
+                        {formatCuit(item.cuit)}
+                      </span>
+                      {item.denominacion && (
+                        <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
+                          {item.denominacion}
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => removeFromHistory(item.cuit)}
+                      className="shrink-0 p-1.5 text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100"
+                      aria-label="Eliminar del historial"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {activeCuits.length > 0 && (

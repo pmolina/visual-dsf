@@ -6,7 +6,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from 'recharts';
 import type { Periodo } from '../types/bcra';
@@ -175,6 +174,16 @@ interface MobileTooltipData {
 export function DebtChart({ periodos }: Props) {
   const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 767px)').matches);
   const [mobileTooltip, setMobileTooltip] = useState<MobileTooltipData | null>(null);
+  const [hiddenEntities, setHiddenEntities] = useState<Set<string>>(new Set());
+
+  function toggleEntity(name: string) {
+    setHiddenEntities(prev => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  }
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 767px)');
@@ -239,10 +248,7 @@ export function DebtChart({ periodos }: Props) {
             width={60}
           />
           <Tooltip content={isMobile ? () => null : <CustomTooltip />} cursor={{ fill: 'transparent' }} />
-          {entityNames.length > 1 && (
-            <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
-          )}
-          {entityNames.map(name => (
+          {entityNames.filter(n => !hiddenEntities.has(n)).map(name => (
             <Bar
               key={name}
               dataKey={name}
@@ -253,6 +259,41 @@ export function DebtChart({ periodos }: Props) {
           ))}
         </BarChart>
       </ResponsiveContainer>
+
+      {entityNames.length > 1 && (
+        <div className="flex flex-wrap gap-1.5 mt-3">
+          <button
+            onClick={() =>
+              setHiddenEntities(
+                hiddenEntities.size < entityNames.length
+                  ? new Set(entityNames)
+                  : new Set()
+              )
+            }
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+          >
+            {hiddenEntities.size < entityNames.length ? 'Desmarcar todo' : 'Marcar todo'}
+          </button>
+          {entityNames.map(name => {
+            const hidden = hiddenEntities.has(name);
+            return (
+              <button
+                key={name}
+                onClick={() => toggleEntity(name)}
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs border border-gray-200 dark:border-gray-700 transition-opacity ${hidden ? 'opacity-40' : 'opacity-100'}`}
+              >
+                <span
+                  className="w-2 h-2 rounded-sm shrink-0"
+                  style={{ backgroundColor: getEntityColor(name) }}
+                />
+                <span className={hidden ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'}>
+                  {name}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {mobileTooltip && (
         <div

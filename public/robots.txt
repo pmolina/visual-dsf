@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://deudas.ar/sitemap.xml

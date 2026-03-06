@@ -163,6 +163,13 @@ export default function App() {
       Promise.allSettled(cuits.map(c => fetchRejectedChecks(c))),
     ]);
 
+    const notFoundCuits = new Set(
+      cuits.filter((_, i) =>
+        debtSettled[i]?.status === 'rejected' && debtSettled[i].reason instanceof NotFoundError &&
+        checksSettled[i]?.status === 'rejected' && checksSettled[i].reason instanceof NotFoundError
+      )
+    );
+
     cuits.forEach((cuit, i) => {
       const debt = debtSettled[i];
       const checks = checksSettled[i];
@@ -173,19 +180,14 @@ export default function App() {
         (checks?.status === 'fulfilled' && checks.value.results?.denominacion) ||
         null;
       upsertHistory(cuit, denominacion);
-      fetch('/api/log-search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cuit, denominacion }),
-      }).catch(() => {});
+      if (!notFoundCuits.has(cuit)) {
+        fetch('/api/log-search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cuit, denominacion }),
+        }).catch(() => {});
+      }
     });
-
-    const notFoundCuits = new Set(
-      cuits.filter((_, i) =>
-        debtSettled[i]?.status === 'rejected' && debtSettled[i].reason instanceof NotFoundError &&
-        checksSettled[i]?.status === 'rejected' && checksSettled[i].reason instanceof NotFoundError
-      )
-    );
 
     setResults(() => {
       const next = new Map<string, ResultState>();

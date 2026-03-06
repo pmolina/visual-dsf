@@ -5,7 +5,7 @@
 ![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Recharts](https://img.shields.io/badge/Recharts-2-22b5bf)
-[![Live demo](https://img.shields.io/badge/Live-deudas.ar-181717?logo=github)](https://deudas.ar/)
+[![Live demo](https://img.shields.io/badge/Live-deudas.ar-000000?logo=vercel&logoColor=white)](https://deudas.ar/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Look up the debt history of an Argentine CUIT using the [BCRA Central de Deudores](https://www.bcra.gob.ar/BCRAyVos/Sistemas_de_informacion_u_operativos.asp) public API.

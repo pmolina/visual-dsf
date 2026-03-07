@@ -1,7 +1,8 @@
 // @jsxRuntime automatic
 // @jsxImportSource react
 import { ImageResponse } from '@vercel/og';
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+
+export const config = { runtime: 'edge' };
 
 const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
@@ -37,11 +38,12 @@ interface BCRAResponse {
   };
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const cuit = (typeof req.query.cuit === 'string' ? req.query.cuit : '')?.replace(/-/g, '');
+export default async function handler(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const cuit = searchParams.get('cuit')?.replace(/-/g, '');
 
   if (!cuit || !/^\d{11}$/.test(cuit)) {
-    return res.status(400).send('Missing or invalid cuit');
+    return new Response('Missing or invalid cuit', { status: 400 });
   }
 
   let denominacion = '';
@@ -69,7 +71,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // fall through — will show fallback card
   }
 
-  const imageResponse = new ImageResponse(
+  return new ImageResponse(
     (
       <div
         style={{
@@ -125,9 +127,4 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     ),
     { width: 1200, height: 630 },
   );
-
-  const buffer = Buffer.from(await imageResponse.arrayBuffer());
-  res.setHeader('Content-Type', 'image/png');
-  res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
-  return res.send(buffer);
 }

@@ -6,6 +6,17 @@ function formatCuit(cuit: string): string {
   return `${cuit.slice(0, 2)}-${cuit.slice(2, 10)}-${cuit.slice(10)}`;
 }
 
+async function fetchName(cuit: string): Promise<string | null> {
+  try {
+    const res = await fetch(`https://api.bcra.gob.ar/centraldedeudores/v1.0/Deudas/Historicas/${cuit}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.results?.denominacion ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export default async function handler(req: Request) {
   const url = new URL(req.url);
   const cuit = url.searchParams.get('cuit')?.replace(/-/g, '') ?? '';
@@ -17,18 +28,22 @@ export default async function handler(req: Request) {
     return fetch(`${origin}/index.html`);
   }
 
-  // For bots, serve dynamic OG meta tags
+  // For bots, fetch name and serve dynamic OG meta tags
   const origin = url.origin;
+  const name = await fetchName(cuit);
   const ogImage = `${origin}/api/og?cuit=${cuit}`;
-  const title = `Deudas de CUIT ${formatCuit(cuit)} — deudas.ar`;
+  const title = name ? `Deudas de ${name} — deudas.ar` : `Deudas de CUIT ${formatCuit(cuit)} — deudas.ar`;
   const description = `Consulta el historial de deudas del CUIT ${formatCuit(cuit)} en la Central de Deudores del BCRA.`;
   const pageUrl = `${origin}/?cuit=${cuit}`;
+  const now = new Date().toISOString();
 
   const html = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
   <title>${title}</title>
+  <meta name="author" content="Pato Molina"/>
+  <meta property="article:published_time" content="${now}"/>
   <meta property="og:type" content="website"/>
   <meta property="og:title" content="${title}"/>
   <meta property="og:description" content="${description}"/>
@@ -36,10 +51,12 @@ export default async function handler(req: Request) {
   <meta property="og:image:width" content="1200"/>
   <meta property="og:image:height" content="630"/>
   <meta property="og:url" content="${pageUrl}"/>
+  <meta property="og:site_name" content="deudas.ar"/>
   <meta name="twitter:card" content="summary_large_image"/>
   <meta name="twitter:title" content="${title}"/>
   <meta name="twitter:description" content="${description}"/>
   <meta name="twitter:image" content="${ogImage}"/>
+  <meta name="twitter:creator" content="@patomolina"/>
 </head>
 <body></body>
 </html>`;

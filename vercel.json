@@ -2,5 +2,15 @@
   "rewrites": [
     { "source": "/", "has": [{ "type": "query", "key": "cuit" }], "destination": "/api/page" },
     { "source": "/((?!api/|assets/).*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/",
+      "has": [{ "type": "query", "key": "cuit" }],
+      "headers": [
+        { "key": "CDN-Cache-Control", "value": "no-cache" },
+        { "key": "Vary", "value": "User-Agent" }
+      ]
+    }
   ]
 }

@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/", "has": [{ "type": "query", "key": "cuit" }], "destination": "/api/page" },
     { "source": "/((?!api/|assets/).*)", "destination": "/index.html" }
   ]
 }

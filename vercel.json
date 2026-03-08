@@ -6,7 +6,7 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": "(?i).*(bot|crawl|spider|facebook|facebot|twitter|whatsapp|telegram|linkedin|slack|discord|ia_archiver).*"
+          "value": "(?i).*(bot|crawl|spider|facebook|facebot|twitterbot|whatsapp|telegram|linkedin|slack|discord|ia_archiver).*"
         }
       ],
       "destination": "/api/og-page?cuit=:cuit"
@@ -17,7 +17,7 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": "(?i).*(bot|crawl|spider|facebook|facebot|twitter|whatsapp|telegram|linkedin|slack|discord|ia_archiver).*"
+          "value": "(?i).*(bot|crawl|spider|facebook|facebot|twitterbot|whatsapp|telegram|linkedin|slack|discord|ia_archiver).*"
         }
       ],
       "destination": "/api/og-page?cuit=:cuit"

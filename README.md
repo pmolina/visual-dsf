@@ -25,6 +25,7 @@ Look up the debt history of an Argentine CUIT using the [BCRA Central de Deudore
 - Share options — native share sheet on mobile, clipboard copy on desktop, and a WhatsApp button with a pre-filled message in Spanish; opening a shared link pre-fills and runs the query automatically
 - Recent searches history stored in `localStorage`, with quick re-search and per-entry deletion
 - Dark mode by default, with light mode toggle and `localStorage` persistence
+- Additional entity info (province and economic activity) fetched asynchronously and displayed below the entity name
 - Dynamic OG cards — when sharing a CUIT URL, bots receive a 1200x630 card with the person's name, total debt, situation badge, and color-coded background (green/orange/red)
 - MIT licensed
 
@@ -70,3 +71,5 @@ Uses the BCRA public API:
 GET https://api.bcra.gob.ar/centraldedeudores/v1.0/Deudas/Historicas/{cuit}
 GET https://api.bcra.gob.ar/centraldedeudores/v1.0/Deudas/ChequesRechazados/{cuit}
 ```
+
+Additional entity info (province and economic activity) is fetched via a server-side proxy at `/api/extra-data` to avoid CORS restrictions. Results are cached for 24 hours at the edge. The call is made only for CUITs that exist in the BCRA system, and failures are silently ignored.
